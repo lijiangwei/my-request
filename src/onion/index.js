@@ -9,8 +9,11 @@ class Onion {
   }
 
   static globalMiddlewares = []; // 全局中间件
+
   static defaultGlobalMiddlewaresLength = 0; // 内置全局中间件长度
+
   static coreMiddlewares = []; // 内核中间件
+
   static defaultCoreMiddlewaresLength = 0; // 内置内核中间件长度
 
   use(newMiddleware, opts = { global: false, core: false, defaultInstance: false }) {

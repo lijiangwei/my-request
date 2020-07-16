@@ -1,72 +1,26 @@
-import { safeJsonParse, readerGBK, ResponseError, getEnv, RequestError } from '../utils';
+import { ResponseError, RequestError } from '../utils';
 
 export default function parseResponseMiddleware(ctx, next) {
-  let copy;
-
   return next()
     .then(() => {
       if (!ctx) return;
       const { res = {}, req = {} } = ctx;
-      const {
-        options: {
-          responseType = 'json',
-          charset = 'utf8',
-          getResponse = false,
-          throwErrIfParseFail = false,
-          parseResponse = true,
-        } = {},
-      } = req || {};
-
-      if (!parseResponse) {
-        return;
-      }
-
-      if (!res || !res.clone) {
-        return;
-      }
-
-      // 只在浏览器环境对 response 做克隆， node 环境如果对 response 克隆会有问题：https://github.com/bitinn/node-fetch/issues/553
-      copy = getEnv() === 'BROWSER' ? res.clone() : res;
-      copy.useCache = res.useCache || false;
-
-      // 解析数据
-      if (charset === 'gbk') {
-        try {
-          return res
-            .blob()
-            .then(readerGBK)
-            .then(d => safeJsonParse(d, false, copy, req));
-        } catch (e) {
-          throw new ResponseError(copy, e.message, null, req, 'ParseError');
-        }
-      } else if (responseType === 'json') {
-        return res.text().then(d => safeJsonParse(d, throwErrIfParseFail, copy, req));
-      }
-      try {
-        // 其他如text, blob, arrayBuffer, formData
-        return res[responseType]();
-      } catch (e) {
-        throw new ResponseError(copy, 'responseType not support', null, req, 'ParseError');
-      }
-    })
-    .then(body => {
-      if (!ctx) return;
-      const { res = {}, req = {} } = ctx;
       const { options: { getResponse = false } = {} } = req || {};
-
-      if (!copy) {
+      if (!res) {
         return;
       }
-      if (copy.status >= 200 && copy.status < 300) {
+      res.useCache = res.useCache || false;
+
+      if (res.status >= 200 && res.status < 300) {
         // 提供源response, 以便自定义处理
         if (getResponse) {
-          ctx.res = { data: body, response: copy };
+          ctx.res = { data: res.data, response: res };
           return;
         }
-        ctx.res = body;
+        ctx.res = res.data;
         return;
       }
-      throw new ResponseError(copy, 'http error', body, req, 'HttpError');
+      throw new ResponseError(res, 'http error', res.data, req, 'HttpError');
     })
     .catch(e => {
       if (e instanceof RequestError || e instanceof ResponseError) {

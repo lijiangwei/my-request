@@ -2,7 +2,7 @@
  * 实现一个简单的Map cache, 稍后可以挪到 utils中, 提供session local map三种前端cache方式.
  * 1. 可直接存储对象   2. 内存无5M限制   3.缺点是刷新就没了, 看反馈后期完善.
  */
-import { parse, stringify } from 'qs';
+import { parse } from 'qs';
 
 export class MapCache {
   constructor(options) {
@@ -76,69 +76,7 @@ export class ResponseError extends Error {
   }
 }
 
-/**
- * http://gitlab.alipay-inc.com/KBSJ/gxt/blob/release_gxt_S8928905_20180531/src/util/request.js#L63
- * 支持gbk
- */
-export function readerGBK(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      resolve(reader.result);
-    };
-    reader.onerror = reject;
-    reader.readAsText(file, 'GBK'); // setup GBK decoding
-  });
-}
-
-/**
- * 安全的JSON.parse
- */
-export function safeJsonParse(data, throwErrIfParseFail = false, response = null, request = null) {
-  try {
-    return JSON.parse(data);
-  } catch (e) {
-    if (throwErrIfParseFail) {
-      throw new ResponseError(response, 'JSON.parse fail', data, request, 'ParseError');
-    }
-  } // eslint-disable-line no-empty
-  return data;
-}
-
-export function timeout2Throw(msec, request) {
-  return new Promise((_, reject) => {
-    setTimeout(() => {
-      reject(new RequestError(`timeout of ${msec}ms exceeded`, request, 'Timeout'));
-    }, msec);
-  });
-}
-
-// If request options contain 'cancelToken', reject request when token has been canceled
-export function cancel2Throw(opt) {
-  return new Promise((_, reject) => {
-    if (opt.cancelToken) {
-      opt.cancelToken.promise.then(cancel => {
-        reject(cancel);
-      });
-    }
-  });
-}
-
 const toString = Object.prototype.toString;
-
-// Check env is browser or node
-export function getEnv() {
-  let env;
-  // Only Node.JS has a process variable that is of [[Class]] process
-  if (typeof process !== 'undefined' && toString.call(process) === '[object process]') {
-    // For node use HTTP adapter
-    env = 'NODE';
-  }
-  if (typeof XMLHttpRequest !== 'undefined') {
-    env = 'BROWSER';
-  }
-  return env;
-}
 
 export function isArray(val) {
   return typeof val === 'object' && Object.prototype.toString.call(val) === '[object Array]';
@@ -156,26 +94,6 @@ export function isObject(val) {
   return val !== null && typeof val === 'object';
 }
 
-export function forEach2ObjArr(target, callback) {
-  if (!target) return;
-
-  if (typeof target !== 'object') {
-    target = [target];
-  }
-
-  if (isArray(target)) {
-    for (let i = 0; i < target.length; i++) {
-      callback.call(null, target[i], i, target);
-    }
-  } else {
-    for (let key in target) {
-      if (Object.prototype.hasOwnProperty.call(target, key)) {
-        callback.call(null, target[key], key, target);
-      }
-    }
-  }
-}
-
 export function getParamObject(val) {
   if (isURLSearchParams(val)) {
     return parse(val.toString(), { strictNullHandling: true });
@@ -184,10 +102,6 @@ export function getParamObject(val) {
     return [val];
   }
   return val;
-}
-
-export function reqStringify(val) {
-  return stringify(val, { arrayFormat: 'repeat', strictNullHandling: true });
 }
 
 export function mergeRequestOptions(options, options2Merge) {

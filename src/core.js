@@ -24,8 +24,10 @@ class Core {
     this.instanceRequestInterceptors = [];
     this.instanceResponseInterceptors = [];
   }
+
   // 旧版拦截器为共享
   static requestInterceptors = [addfixInterceptor];
+
   static responseInterceptors = [];
 
   // 请求拦截器 默认 { global: true } 兼容旧版本拦截器
@@ -97,7 +99,7 @@ class Core {
           if (errorHandler) {
             try {
               const data = errorHandler(error);
-              resolve(data);
+              reject(data);
             } catch (e) {
               reject(e);
             }

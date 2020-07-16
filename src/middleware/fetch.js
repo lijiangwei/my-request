@@ -1,6 +1,3 @@
-import 'isomorphic-fetch';
-import { timeout2Throw, cancel2Throw, getEnv } from '../utils';
-
 // 是否已经警告过
 let warnedCoreType = false;
 
@@ -10,11 +7,25 @@ function __defaultValidateCache(url, options) {
   return method.toLowerCase() === 'get';
 }
 
+function fetch(url, options) {
+  return new Promise((resolve, reject) => {
+    my.request({
+      ...options,
+      url,
+      success: res => {
+        resolve(res);
+      },
+      fail: err => {
+        reject(err);
+      },
+    }).catch(err => err);
+  });
+}
+
 export default function fetchMiddleware(ctx, next) {
   if (!ctx) return next();
   const { req: { options = {}, url = '' } = {}, cache, responseInterceptors } = ctx;
   const {
-    timeout = 0,
     __umiRequestCoreType__ = 'normal',
     useCache = false,
     method = 'get',
@@ -24,7 +35,7 @@ export default function fetchMiddleware(ctx, next) {
   } = options;
 
   if (__umiRequestCoreType__ !== 'normal') {
-    if (process && process.env && process.env.NODE_ENV === 'development' && warnedCoreType === false) {
+    if (warnedCoreType === false) {
       warnedCoreType = true;
       console.warn(
         '__umiRequestCoreType__ is a internal property that use in umi-request, change its value would affect the behavior of request! It only use when you want to extend or use request core.'
@@ -35,13 +46,8 @@ export default function fetchMiddleware(ctx, next) {
 
   const adapter = fetch;
 
-  if (!adapter) {
-    throw new Error('Global fetch not exist!');
-  }
-
   // 从缓存池检查是否有缓存数据
-  const isBrowser = getEnv() === 'BROWSER';
-  const needCache = validateCache(url, options) && useCache && isBrowser;
+  const needCache = validateCache(url, options) && useCache;
   if (needCache) {
     let responseCache = cache.get({
       url,
@@ -56,21 +62,12 @@ export default function fetchMiddleware(ctx, next) {
     }
   }
 
-  let response;
-  // 超时处理、取消请求处理
-  if (timeout > 0) {
-    response = Promise.race([cancel2Throw(options, ctx), adapter(url, options), timeout2Throw(timeout, ctx.req)]);
-  } else {
-    response = Promise.race([cancel2Throw(options, ctx), adapter(url, options)]);
-  }
+  // let response = Promise.race([cancel2Throw(options, ctx), adapter(url, options)]);
+  let response = adapter(url, options);
 
   // 兼容老版本 response.interceptor
   responseInterceptors.forEach(handler => {
-    response = response.then(res => {
-      // Fix multiple clones not working, issue: https://github.com/github/fetch/issues/504
-      let clonedRes = typeof res.clone === 'function' ? res.clone() : res;
-      return handler(clonedRes, options);
-    });
+    response = response.then(res => handler(res, options));
   });
 
   return response.then(res => {

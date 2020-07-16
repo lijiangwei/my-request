@@ -1,9 +1,6 @@
 import Core from './core';
-import Cancel from './cancel/cancel';
-import CancelToken from './cancel/cancelToken';
-import isCancel from './cancel/isCancel';
 import Oinon from './onion';
-import { getParamObject, mergeRequestOptions } from './utils';
+import { mergeRequestOptions } from './utils';
 
 // 通过 request 函数，在 core 之上再封装一层，提供原 umi/request 一致的 api，无缝升级
 const request = (initOptions = {}) => {
@@ -28,14 +25,10 @@ const request = (initOptions = {}) => {
   };
 
   // 请求语法糖： reguest.get request.post ……
-  const METHODS = ['get', 'post', 'delete', 'put', 'patch', 'head', 'options', 'rpc'];
+  const METHODS = ['get', 'post', 'delete', 'put'];
   METHODS.forEach(method => {
     umiInstance[method] = (url, options) => umiInstance(url, { ...options, method });
   });
-
-  umiInstance.Cancel = Cancel;
-  umiInstance.CancelToken = CancelToken;
-  umiInstance.isCancel = isCancel;
 
   umiInstance.extendOptions = coreInstance.extendOptions.bind(coreInstance);
 
@@ -59,10 +52,5 @@ const request = (initOptions = {}) => {
  * @param {object} headers 统一的headers
  */
 export const extend = initOptions => request(initOptions);
-
-/**
- * 暴露 fetch 中间件，保障依旧可以使用
- */
-export const fetch = request({ parseResponse: false });
 
 export default request({});
