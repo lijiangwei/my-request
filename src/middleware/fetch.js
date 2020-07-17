@@ -7,7 +7,7 @@ function __defaultValidateCache(url, options) {
   return method.toLowerCase() === 'get';
 }
 
-function fetch(url, options) {
+function myFetch(url, options) {
   return new Promise((resolve, reject) => {
     my.request({
       ...options,
@@ -44,7 +44,7 @@ export default function fetchMiddleware(ctx, next) {
     return next();
   }
 
-  const adapter = fetch;
+  const adapter = myFetch;
 
   // 从缓存池检查是否有缓存数据
   const needCache = validateCache(url, options) && useCache;
